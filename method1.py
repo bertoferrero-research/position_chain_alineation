@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import minimize
+import matplotlib.pyplot as plt
 
 def load_positions(sample_space_millis, multiple_markers_behaviour):
 
@@ -63,33 +64,69 @@ for sample_space_millis in sample_space_millis_set:
         n = p_est.shape[0]
         d = 2  # 2D
 
-        # Fijamos los extremos
-        P0 = p_est[0]
-        Pn = p_est[-1]
+        # Paso 1: obtener extremos reales
+        P0_real = p_real[0]
+        Pn_real = p_real[-1]
 
-        # Aplanamos los puntos intermedios (lo que vamos a optimizar)
-        initial_guess = p_est[1:-1].flatten()
+        # Paso 2: vector dirección unitario de la línea recta real
+        direction = Pn_real - P0_real
+        direction_norm = np.linalg.norm(direction)
+        direction_unit = direction / direction_norm
 
-        def total_error(P_flat):
-            # Reconstruimos el array completo de posiciones con extremos fijos
-            P_mid = P_flat.reshape(-1, d)
-            P_full = np.vstack([P0, P_mid, Pn])
-            
-            # Error euclídeo al cuadrado
-            error = np.sum(np.linalg.norm(P_full[1:-1] - p_real[1:-1], axis=1)**2)
+        # Paso 3: proyectar puntos estimados sobre la línea recta
+        def project_onto_line(P, origin, direction_unit):
+            vectors = P - origin  # vectores desde el origen a cada punto
+            scalars = np.dot(vectors, direction_unit)  # proyección escalar
+            P_proj = origin + np.outer(scalars, direction_unit)  # reconstrucción sobre la línea
+            return P_proj, scalars
 
-            # (Opcional) Agregar suavidad:
-            # for i in range(1, len(P_full) - 1):
-            #     error += lambda_ * np.linalg.norm(P_full[i-1] - 2 * P_full[i] + P_full[i+1])**2
-            
-            return error
+        P_proj, scalar_init = project_onto_line(p_est, P0_real, direction_unit)
 
-        # Ejecutar optimización
-        res = minimize(total_error, initial_guess, method='L-BFGS-B')
+        # Paso 4: preparar optimización sobre los escalares intermedios
+        s0 = scalar_init[0]
+        sn = scalar_init[-1]
 
-        # Reconstruir las posiciones corregidas
-        P_optimized = np.vstack([P0, res.x.reshape(-1, d), Pn])
+        def scalar_error(s_middle):
+            s_full = np.concatenate(([s0], s_middle, [sn]))
+            P_corr = P0_real + np.outer(s_full, direction_unit)
+            return np.sum(np.linalg.norm(P_corr - p_est, axis=1)**2)
+
+        # Optimizar los valores escalares intermedios
+        res = minimize(scalar_error, scalar_init[1:-1], method='L-BFGS-B')
+
+        # Paso 5: reconstruir puntos corregidos
+        s_opt = np.concatenate(([s0], res.x, [sn]))
+        P_corrected = P0_real + np.outer(s_opt, direction_unit)
 
         # Guardar las posiciones optimizadas
-        save_positions(P_optimized, sample_space_millis=sample_space_millis, multiple_markers_behaviour=multiple_markers_behaviour, timestamps=timestamps)
+        save_positions(P_corrected, sample_space_millis=sample_space_millis, multiple_markers_behaviour=multiple_markers_behaviour, timestamps=timestamps)
 
+
+        plt.figure(figsize=(10, 6))
+
+        # Línea de movimiento real (recta entre extremos reales)
+        plt.plot([p_real[0, 0], p_real[-1, 0]],
+                [p_real[0, 1], p_real[-1, 1]],
+                linestyle='--', label='Línea de movimiento', linewidth=1)
+
+        # Puntos extremos reales
+        plt.scatter(*p_real[0], color='green', s=80, label='Inicio real')
+        plt.scatter(*p_real[-1], color='red', s=80, label='Fin real')
+
+        # Puntos estimados originales
+        plt.scatter(p_est[:, 0], p_est[:, 1], color='blue', label='Estimaciones (por frame)', marker='x')
+
+        # Puntos corregidos
+        plt.scatter(P_corrected[:, 0], P_corrected[:, 1], color='orange', label='Estimaciones corregidas', marker='o')
+
+        # Conectar los puntos corregidos para ver la trayectoria
+        plt.plot(P_corrected[:, 0], P_corrected[:, 1], color='orange', linewidth=1)
+
+        plt.title('Corrección de trayectoria sobre línea recta')
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.axis('equal')
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
