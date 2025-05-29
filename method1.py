@@ -56,17 +56,17 @@ multiple_markers_behaviour_set = ['WEIGHTED_MEDIAN']#['CLOSEST','WEIGHTED_AVERAG
 for sample_space_millis in sample_space_millis_set:
     for multiple_markers_behaviour in multiple_markers_behaviour_set:
 
-        p_est, p_real, timestamps = load_positions(sample_space_millis=sample_space_millis, multiple_markers_behaviour=multiple_markers_behaviour)
+        P_est, P_real, timestamps = load_positions(sample_space_millis=sample_space_millis, multiple_markers_behaviour=multiple_markers_behaviour)
 
         # Suponé que ya tenés esto:
         # P_est: (n, 2) interpolación inicial
         # P_real: (n, 2) posiciones reales
-        n = p_est.shape[0]
+        n = P_est.shape[0]
         d = 2  # 2D
 
         # Paso 1: obtener extremos reales
-        P0_real = p_real[0]
-        Pn_real = p_real[-1]
+        P0_real = P_real[0]
+        Pn_real = P_real[-1]
 
         # Paso 2: vector dirección unitario de la línea recta real
         direction = Pn_real - P0_real
@@ -75,21 +75,21 @@ for sample_space_millis in sample_space_millis_set:
 
         # Paso 3: proyectar puntos estimados sobre la línea recta
         def project_onto_line(P, origin, direction_unit):
-            vectors = P - origin  # vectores desde el origen a cada punto
-            scalars = np.dot(vectors, direction_unit)  # proyección escalar
-            P_proj = origin + np.outer(scalars, direction_unit)  # reconstrucción sobre la línea
+            vectors = P - origin
+            scalars = np.dot(vectors, direction_unit)
+            P_proj = origin + np.outer(scalars, direction_unit)
             return P_proj, scalars
 
-        P_proj, scalar_init = project_onto_line(p_est, P0_real, direction_unit)
+        P_proj, scalar_init = project_onto_line(P_est, P0_real, direction_unit)
 
         # Paso 4: preparar optimización sobre los escalares intermedios
-        s0 = scalar_init[0]
-        sn = scalar_init[-1]
+        s0 = 0.0  # Debe ser el inicio exacto
+        sn = direction_norm  # Debe ser la longitud total
 
         def scalar_error(s_middle):
             s_full = np.concatenate(([s0], s_middle, [sn]))
             P_corr = P0_real + np.outer(s_full, direction_unit)
-            return np.sum(np.linalg.norm(P_corr - p_est, axis=1)**2)
+            return np.sum(np.linalg.norm(P_corr - P_est, axis=1)**2)
 
         # Optimizar los valores escalares intermedios
         res = minimize(scalar_error, scalar_init[1:-1], method='L-BFGS-B')
@@ -105,16 +105,16 @@ for sample_space_millis in sample_space_millis_set:
         plt.figure(figsize=(10, 6))
 
         # Línea de movimiento real (recta entre extremos reales)
-        plt.plot([p_real[0, 0], p_real[-1, 0]],
-                [p_real[0, 1], p_real[-1, 1]],
+        plt.plot([P_real[0, 0], P_real[-1, 0]],
+                [P_real[0, 1], P_real[-1, 1]],
                 linestyle='--', label='Línea de movimiento', linewidth=1)
 
         # Puntos extremos reales
-        plt.scatter(*p_real[0], color='green', s=80, label='Inicio real')
-        plt.scatter(*p_real[-1], color='red', s=80, label='Fin real')
+        plt.scatter(*P_real[0], color='green', s=80, label='Inicio real')
+        plt.scatter(*P_real[-1], color='red', s=80, label='Fin real')
 
         # Puntos estimados originales
-        plt.scatter(p_est[:, 0], p_est[:, 1], color='blue', label='Estimaciones (por frame)', marker='x')
+        plt.scatter(P_est[:, 0], P_est[:, 1], color='blue', label='Estimaciones (por frame)', marker='x')
 
         # Puntos corregidos
         plt.scatter(P_corrected[:, 0], P_corrected[:, 1], color='orange', label='Estimaciones corregidas', marker='o')
