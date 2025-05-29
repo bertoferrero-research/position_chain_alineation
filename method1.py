@@ -64,38 +64,37 @@ for sample_space_millis in sample_space_millis_set:
         n = P_est.shape[0]
         d = 2  # 2D
 
-        # Paso 1: obtener extremos reales
+        # Paso 1: definir extremos reales
         P0_real = P_real[0]
         Pn_real = P_real[-1]
 
-        # Paso 2: vector dirección unitario de la línea recta real
+        # Paso 2: vector dirección unitario de la línea real
         direction = Pn_real - P0_real
-        direction_norm = np.linalg.norm(direction)
-        direction_unit = direction / direction_norm
+        length = np.linalg.norm(direction)
+        direction_unit = direction / length
 
-        # Paso 3: proyectar puntos estimados sobre la línea recta
-        def project_onto_line(P, origin, direction_unit):
-            vectors = P - origin
-            scalars = np.dot(vectors, direction_unit)
-            P_proj = origin + np.outer(scalars, direction_unit)
-            return P_proj, scalars
+        # Paso 3: inicializar escalares (posición a lo largo de la recta)
+        # Proyectamos las estimaciones sobre la línea como punto de partida
+        def project_scalars(P, origin, dir_unit):
+            return np.dot(P - origin, dir_unit)
 
-        P_proj, scalar_init = project_onto_line(P_est, P0_real, direction_unit)
+        s_init = project_scalars(P_est, P0_real, direction_unit)
 
-        # Paso 4: preparar optimización sobre los escalares intermedios
-        s0 = 0.0  # Debe ser el inicio exacto
-        sn = direction_norm  # Debe ser la longitud total
+        # Forzar extremos
+        s_init[0] = 0.0
+        s_init[-1] = length
 
-        def scalar_error(s_middle):
-            s_full = np.concatenate(([s0], s_middle, [sn]))
-            P_corr = P0_real + np.outer(s_full, direction_unit)
-            return np.sum(np.linalg.norm(P_corr - P_est, axis=1)**2)
+        # Paso 4: definir función de coste
+        def cost(s_middle):
+            s_full = np.concatenate(([0.0], s_middle, [length]))
+            P_proj = P0_real + np.outer(s_full, direction_unit)
+            return np.sum(np.linalg.norm(P_proj - P_est, axis=1)**2)
 
-        # Optimizar los valores escalares intermedios
-        res = minimize(scalar_error, scalar_init[1:-1], method='L-BFGS-B')
+        # Paso 5: optimizar escalares intermedios
+        res = minimize(cost, s_init[1:-1], method='L-BFGS-B')
 
-        # Paso 5: reconstruir puntos corregidos
-        s_opt = np.concatenate(([s0], res.x, [sn]))
+        # Paso 6: reconstruir puntos corregidos sobre la línea
+        s_opt = np.concatenate(([0.0], res.x, [length]))
         P_corrected = P0_real + np.outer(s_opt, direction_unit)
 
         # Guardar las posiciones optimizadas
@@ -107,7 +106,10 @@ for sample_space_millis in sample_space_millis_set:
         # Línea de movimiento real (recta entre extremos reales)
         plt.plot([P_real[0, 0], P_real[-1, 0]],
                 [P_real[0, 1], P_real[-1, 1]],
-                linestyle='--', label='Línea de movimiento', linewidth=1)
+                linestyle='--', color='gray', label='Línea de movimiento', linewidth=1)
+
+        # Puntos reales (interpolados o corregidos)
+        plt.scatter(P_real[:, 0], P_real[:, 1], color='gray', label='Puntos reales (interpolados)', marker='.', s=30)
 
         # Puntos extremos reales
         plt.scatter(*P_real[0], color='green', s=80, label='Inicio real')
@@ -118,9 +120,19 @@ for sample_space_millis in sample_space_millis_set:
 
         # Puntos corregidos
         plt.scatter(P_corrected[:, 0], P_corrected[:, 1], color='orange', label='Estimaciones corregidas', marker='o')
-
-        # Conectar los puntos corregidos para ver la trayectoria
         plt.plot(P_corrected[:, 0], P_corrected[:, 1], color='orange', linewidth=1)
+
+        # Dibujar líneas punteadas desde P_real a P_est y desde P_corrected a P_est
+        for i in range(len(P_est)):
+            # Línea desde posición real inicial (interpolada) a estimada
+            plt.plot([P_real[i, 0], P_est[i, 0]],
+                    [P_real[i, 1], P_est[i, 1]],
+                    linestyle=':', color='gray', linewidth=0.8)
+
+            # Línea desde posición corregida a estimada
+            plt.plot([P_corrected[i, 0], P_est[i, 0]],
+                    [P_corrected[i, 1], P_est[i, 1]],
+                    linestyle=':', color='orange', linewidth=0.8)
 
         plt.title('Corrección de trayectoria sobre línea recta')
         plt.xlabel('X')
