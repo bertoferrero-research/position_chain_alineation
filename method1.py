@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 
+#Método 1 - Ajustamos la posición estimada real empleando mínimos cuadrados
 
 
 def load_positions(sample_space_millis, multiple_markers_behaviour):
@@ -145,7 +146,7 @@ for sample_space_millis in sample_space_millis_set:
         plt.scatter(P_est[:, 0], P_est[:, 1], color='blue', label='Estimaciones (por frame)', marker='x')
 
         # Puntos corregidos
-        plt.scatter(P_corrected[:, 0], P_corrected[:, 1], color='orange', label='Estimaciones corregidas', marker='o')
+        plt.scatter(P_corrected[:, 0], P_corrected[:, 1], color='orange', label='Posiciones real corregidas', marker='o')
         plt.plot(P_corrected[:, 0], P_corrected[:, 1], color='orange', linewidth=1)
 
         # Líneas desde puntos reales y corregidos a estimados
