@@ -75,7 +75,7 @@ def load_marker_positions(json_path=None):
     return marker_dict
 
 sample_space_millis_set = [0, 1000, 2000]
-multiple_markers_behaviour_set = ['WEIGHTED_MEDIAN']#['CLOSEST','WEIGHTED_AVERAGE','AVERAGE','WEIGHTED_MEDIAN','MEDIAN']
+multiple_markers_behaviour_set = ['CLOSEST','WEIGHTED_AVERAGE','AVERAGE','WEIGHTED_MEDIAN','MEDIAN']#['WEIGHTED_MEDIAN']
 markers_data = load_marker_positions()
 first_exec = True
 
