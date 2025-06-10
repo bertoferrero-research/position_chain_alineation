@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
+import os
 
 #Método 1 - Ajustamos la posición estimada real empleando mínimos cuadrados
 #Versión 2 - Definimos de manera separada los extremos reales
@@ -9,14 +10,6 @@ import matplotlib.pyplot as plt
 P_real = [
     [3.733, 0.691],  # Inicio real
     [0.693, 0.882],  # Final real
-]
-files_name = [
-    'test_position_sample_1749430840000.csv',
-    'test_position_sample_1749430879786.csv',
-    'test_position_sample_1749430908103.csv',
-    'test_position_sample_1749430937291.csv',
-    'test_position_sample_1749430989790.csv',
-    'test_position_sample_1749431017399.csv',
 ]
 csv_separator = ','
 csv_decimal = '.'
@@ -29,7 +22,6 @@ marker_info_column='markers_info'):
 
     # Comenzamos cargando el csv con panda
     import pandas as pd
-    import os
     import sys
     
     # Definimos la ruta del archivo CSV
@@ -91,6 +83,9 @@ def load_marker_positions(json_path=None):
 
 P_real = np.array(P_real)
 markers_data = load_marker_positions()
+
+input_dir = os.path.join(os.path.dirname(__file__), 'input')
+files_name = [f for f in os.listdir(input_dir) if f.lower().endswith('.csv')]
 
 for file_name in files_name:
 
