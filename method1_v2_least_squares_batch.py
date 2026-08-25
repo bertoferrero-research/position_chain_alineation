@@ -19,8 +19,8 @@ El proceso es el siguiente:
 
 
 P_real = [
-    [3.733, 0.691],  # Inicio real
-    [0.693, 0.882],  # Final real
+    [0.6361602374262494, 27.033201687889385],  # Inicio real (primera fila de all.csv)
+    [0.7173637497107843, 1.1517630862135668],  # Final real (última fila de all.csv)
 ]
 csv_separator = ','
 csv_decimal = '.'
@@ -55,11 +55,12 @@ marker_info_column='markers_info'):
 
     return p_est, marker_ids_list
 
-def save_positions(input_file_name, output_file_name, p_est_optimized, clean_if_exists = False):
+def save_positions(input_file_name, output_file_name, p_est_optimized, clean_if_exists = False,
+estimated_position_x_column='rawX', estimated_position_y_column='rawY'):
     # Guardamos las posiciones optimizadas en un CSV
     import pandas as pd
     import os
-    
+
     # Definimos la ruta del archivo CSV
     csv_path = os.path.join(os.path.dirname(__file__), 'output', output_file_name)
 
@@ -70,6 +71,10 @@ def save_positions(input_file_name, output_file_name, p_est_optimized, clean_if_
     df = df_input.copy()
     df['alineatedRealX'] = p_est_optimized[:, 0]
     df['alineatedRealY'] = p_est_optimized[:, 1]
+    # Error de posición: distancia entre la estimación bruta y su proyección sobre la línea real
+    df['errorX'] = df[estimated_position_x_column] - df['alineatedRealX']
+    df['errorY'] = df[estimated_position_y_column] - df['alineatedRealY']
+    df['euclideanError'] = np.sqrt(df['errorX']**2 + df['errorY']**2)
 
     # Si el archivo existe, añadimos; si no, lo creamos
     if os.path.exists(csv_path) and not clean_if_exists:
