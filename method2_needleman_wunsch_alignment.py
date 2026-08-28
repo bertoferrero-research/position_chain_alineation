@@ -5,25 +5,29 @@ import matplotlib.pyplot as plt
 '''
 Método 2 - Alineación de secuencias (Needleman-Wunsch) entre la estimación ArUco y la interpolada
 
-No es ni un corrector ni un evaluador: es un RESOLVEDOR DE CORRESPONDENCIA. No corrige la
-estimación bruta (no la modifica en absoluto, ni siquiera la guarda en la salida) ni corrige la
-interpolada (tampoco cambia ningún valor ni timestamp suyo) ni calcula ningún error. Es, en la
-práctica, un paso intermedio incompleto: resuelve la parte difícil (con qué punto real se
-corresponde cada estimación) pero no lo usa para corregir ni para medir nada.
+No corrige la estimación bruta (no la modifica en absoluto) ni corrige la interpolada (tampoco
+cambia ningún valor ni timestamp suyo). Es un RESOLVEDOR DE CORRESPONDENCIA + EVALUADOR: decide,
+para cada estimación de una combinación (sampleSpaceMillis, multipleMarkersBehaviour), qué punto
+de la trayectoria real interpolada más fina (la de sampleSpaceMillis=0) le corresponde — por
+parecido espacial (similaridad = distancia euclídea en negativo), no por igualdad de índice ni de
+timestamp — y calcula el error entre cada estimación y el punto real con el que quedó emparejada.
+A diferencia de `method1`/`method1_v2`, este error sí puede tener componente a lo largo de la
+línea (no solo perpendicular), porque el punto real emparejado no se ajusta para minimizar esa
+distancia — es un punto ya fijo de la interpolada, elegido solo por su parecido espacial global
+dentro de la alineación.
 
-Lo que hace es decidir, para cada estimación de una combinación (sampleSpaceMillis,
-multipleMarkersBehaviour), qué punto de la trayectoria real interpolada más fina (la de
-sampleSpaceMillis=0) le corresponde — por parecido espacial (similaridad = distancia euclídea en
-negativo), no por igualdad de índice ni de timestamp.
+OJO — esto NO responde a "¿dónde debería estar el sujeto en el instante exacto de esta captura?".
+Empareja por PARECIDO ESPACIAL, no por timestamp: el punto de la interpolada elegido para cada
+estimación no tiene por qué corresponder al mismo instante que esa estimación. Ver README.md,
+sección "La pregunta clave: ¿qué tipo de punto de comparación busca cada método?".
 
 El proceso es el siguiente:
 1. Carga la interpolada de referencia (la más fina: sampleSpaceMillis=0, primer comportamiento).
 2. Para cada combinación, carga su propia secuencia de estimaciones brutas.
 3. Alinea ambas secuencias con Needleman-Wunsch, permitiendo huecos donde no hay pareja razonable.
-4. Guarda SOLO los puntos de la interpolada de referencia que encontraron pareja (con su timestamp
-   original, sin modificar) en optimized_positions_method2.csv — filtra/selecciona, no corrige.
-   La estimación con la que se emparejó cada punto NO se guarda; para calcular un error habría que
-   volver a samples.csv y cruzar por timestamp con esta salida.
+4. Guarda, para cada pareja encontrada, el punto de la interpolada (`optimizedRawX/Y`, con su
+   timestamp original, sin modificar), la estimación con la que se emparejó (`estimatedRawX/Y`) y
+   el error entre ambas (`errorX/Y`, `euclideanError`) en optimized_positions_method2.csv.
 '''
 
 def load_positions(sample_space_millis, multiple_markers_behaviour):
@@ -58,11 +62,11 @@ def load_positions(sample_space_millis, multiple_markers_behaviour):
 
     return p_est, p_real, timestamps, marker_ids_list
 
-def save_positions(p_est_optimized, sample_space_millis, multiple_markers_behaviour, timestamps, clean_if_exists = False):
+def save_positions(p_est_optimized, p_est_matched, sample_space_millis, multiple_markers_behaviour, timestamps, clean_if_exists = False):
     # Guardamos las posiciones optimizadas en un CSV
     import pandas as pd
     import os
-    
+
     # Definimos la ruta del archivo CSV
     csv_path = os.path.join(os.path.dirname(__file__), 'optimized_positions_method2.csv')
 
@@ -71,6 +75,12 @@ def save_positions(p_est_optimized, sample_space_millis, multiple_markers_behavi
     df['sampleSpaceMillis'] = sample_space_millis
     df['multipleMarkersBehaviour'] = multiple_markers_behaviour
     df['timestamp'] = timestamps
+    # Estimación ArUco con la que se emparejó cada punto real, y el error entre ambas
+    df['estimatedRawX'] = p_est_matched[:, 0]
+    df['estimatedRawY'] = p_est_matched[:, 1]
+    df['errorX'] = df['estimatedRawX'] - df['optimizedRawX']
+    df['errorY'] = df['estimatedRawY'] - df['optimizedRawY']
+    df['euclideanError'] = np.sqrt(df['errorX']**2 + df['errorY']**2)
 
     # Si el archivo existe, añadimos; si no, lo creamos
     if os.path.exists(csv_path) and not clean_if_exists:
@@ -172,12 +182,14 @@ for sample_space_millis in sample_space_millis_set:
         plt.figure(figsize=(10, 6))
 
         # Guardar las posiciones alineadas (solo las que tienen ambos valores)
-        # Ahora se guarda la posición real estimada alineada (P_real_aligned), no la estimada por aruco
+        # Se guarda la posición real interpolada alineada (P_real_aligned) junto con la estimación
+        # ArUco con la que se emparejó (P_est_aligned), para poder calcular el error de esa pareja.
         aligned_points = [(real, est, ts) for real, est, ts in zip(P_real_aligned, P_est_aligned, timestamps_aligned) if est is not None and real is not None]
         if aligned_points:
             P_real_save = np.array([real for real, _, _ in aligned_points])
+            P_est_save = np.array([est for _, est, _ in aligned_points])
             timestamps_save = np.array([ts for _, _, ts in aligned_points])
-            save_positions(P_real_save, sample_space_millis, multiple_markers_behaviour, timestamps_save, clean_if_exists=first_exec)
+            save_positions(P_real_save, P_est_save, sample_space_millis, multiple_markers_behaviour, timestamps_save, clean_if_exists=first_exec)
             # Imprimir en el plot los puntos P_real_save
             plt.scatter(P_real_save[:, 0], P_real_save[:, 1], color='yellow', label='P_real_save (guardado)', marker='*', s=80, zorder=5)
             first_exec = False

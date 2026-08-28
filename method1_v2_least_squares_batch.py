@@ -17,6 +17,11 @@ este script: la recta real (P_real) es una constante hardcodeada al principio de
 lee de ningún CSV. A diferencia del método 1, aquí NINGÚN punto se fija a los extremos — todos,
 incluidos el primero y el último, se optimizan igual.
 
+OJO — esto NO responde a "¿dónde debería estar el sujeto en el instante exacto de esta captura?".
+Busca el punto más CONVENIENTE (el que mejor encaja con el propio dato), no usa el tiempo para
+nada. Para esa pregunta de tiempo, usa `method3_constant_velocity_time_estimation.py`. Ver
+README.md, sección "La pregunta clave: ¿qué tipo de punto de comparación busca cada método?".
+
 El proceso es el siguiente:
 1. Carga la estimación bruta (rawX, rawY) de cada CSV de input/.
 2. Define los extremos reales de la línea con la constante P_real (editar a mano si cambia el

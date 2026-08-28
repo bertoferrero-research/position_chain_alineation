@@ -230,6 +230,38 @@ fila, así que el error resultante recoge las dos componentes (`u` y `v`).
 - Dibuja un plot con la línea real, la trayectoria calculada y la esperada, y una línea punteada
   por cada punto uniendo ambas (el vector de error completo).
 
+## La pregunta clave: ¿qué tipo de punto de comparación busca cada método?
+
+Esta es la distinción que más ha costado fijar en este documento, así que queda aparte, bien
+explícita, para no volver a perderla de vista: **ninguno de los métodos 1/1v2/2/2v2 responde a la
+pregunta "¿dónde debería estar el sujeto en el instante exacto de esta captura?"** — solo
+`method3` lo hace. Los demás resuelven preguntas distintas, aunque a primera vista parezcan
+similares:
+
+- **`method1`/`method1_v2`** buscan el punto **más conveniente posible** — el que minimiza la
+  distancia al propio dato calculado, sobre una recta continua con infinitos candidatos. No hay
+  ningún "punto real" independiente al que aspirar: el resultado siempre encaja lo mejor posible
+  con lo que ya tenías, por construcción, y no usa el tiempo para nada.
+- **`method2`/`method2_v2`** buscan el punto **más parecido espacialmente** dentro de un conjunto
+  ya existente de puntos reales (la interpolada de `samples.csv`, o la referencia densa generada
+  internamente en la v2). Esos puntos sí representan instantes reales concretos, pero el criterio
+  de selección es "cuál se parece más en el espacio" (distancia euclídea), **no** "cuál
+  corresponde al mismo instante que esta fila" — el timestamp de la fila no interviene en la
+  decisión de emparejamiento en ningún momento.
+- **`method3`** es el único que calcula la posición esperada **a partir solo del tiempo**, sin
+  ninguna búsqueda ni ajuste: coge el timestamp de la fila, aplica la fórmula de velocidad
+  constante, y esa es la posición real esperada en ese instante exacto — sin mirar en ningún
+  momento el dato calculado para decidirla.
+
+Si el objetivo es "evaluar el error comparando contra dónde debería estar el sujeto en el momento
+de la captura" (el objetivo habitual de la tesis), **la herramienta correcta es `method3`**
+(o la columna `errorX`/`errorY` ya calculada por tiempo en `samples.csv`). `method1`/`method1_v2`
+solo tienen sentido si además quieres aislar el error perpendicular sin depender de la asunción de
+velocidad constante; `method2`/`method2_v2` solo tienen sentido si específicamente **no te fías**
+de que el timestamp de cada fila refleje bien cuándo se tomó esa captura (frames perdidos,
+desincronización) — algo que hay que comprobar antes de usarlos (ver el chequeo de
+`timestamp` vs `position_calculation_timestamp` en el ejemplo de `all.csv`), no asumir.
+
 ## Cuál usar / cómo interpretarlos juntos
 
 - **Método 1**: bueno cuando confías en que el frame inicial y final de la estimación ArUco

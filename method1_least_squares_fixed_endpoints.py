@@ -15,6 +15,11 @@ Solo puede detectar/corregir desviación PERPENDICULAR a la recta. La posición 
 recta (s) se ajusta libremente para acercarse todo lo posible al punto calculado, así que
 cualquier desviación en esa dirección se absorbe en el propio ajuste y no queda registrada.
 
+OJO — esto NO responde a "¿dónde debería estar el sujeto en el instante exacto de esta captura?".
+Busca el punto más CONVENIENTE (el que mejor encaja con el propio dato), no usa el tiempo para
+nada. Para esa pregunta de tiempo, usa `method3_constant_velocity_time_estimation.py`. Ver
+README.md, sección "La pregunta clave: ¿qué tipo de punto de comparación busca cada método?".
+
 El proceso es el siguiente:
 1. Para cada combinación de sampleSpaceMillis/multipleMarkersBehaviour en samples.csv, carga la
    estimación bruta (rawX, rawY) y la interpolada (realX, realY) de esa combinación.
