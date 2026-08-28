@@ -4,18 +4,26 @@ import matplotlib.pyplot as plt
 import os
 
 '''
-Este script alinea las posiciones estimadas de un movimiento a lo largo de una línea real
-definida por dos puntos extremos reales, empleando un método de mínimos cuadrados.
-El proceso es el siguiente:
-1. Carga las posiciones estimadas y reales desde un CSV.
-2. Define los extremos reales de la línea.
-3. Calcula la dirección de la línea real y proyecta las posiciones estimadas sobre ella.
-4. Define una función de coste que mide la discrepancia entre las posiciones estimadas y las proyectadas.
-5. Utiliza un optimizador para ajustar las posiciones estimadas a lo largo de la línea real.
-'''
+Método 1 v2 - Corrección de la estimación por mínimos cuadrados, genérica y sin extremos fijos
 
-#Método 1 - Ajustamos la posición estimada real empleando mínimos cuadrados
-#Versión 2 - Definimos de manera separada los extremos reales
+Es un POSTPROCESADOR + EVALUADOR PARCIAL: corrige una posición (igual que el método 1) y además
+calcula un error, pero solo el componente perpendicular a la línea (cross-track) — no el error
+total, porque no usa ninguna información de tiempo/velocidad.
+Lo que corrige es la estimación BRUTA (rawX, rawY) — nunca hay una interpolada de por medio en
+este script: la recta real (P_real) es una constante hardcodeada al principio del fichero, no se
+lee de ningún CSV. A diferencia del método 1, aquí NINGÚN punto se fija a los extremos — todos,
+incluidos el primero y el último, se optimizan igual.
+
+El proceso es el siguiente:
+1. Carga la estimación bruta (rawX, rawY) de cada CSV de input/.
+2. Define los extremos reales de la línea con la constante P_real (editar a mano si cambia el
+   experimento).
+3. Calcula la dirección de la línea real y proyecta cada estimación sobre ella.
+4. Optimiza por mínimos cuadrados la posición de TODOS los puntos a lo largo de la línea (sin fijar
+   extremos), buscando la que mejor explica cada estimación bruta.
+5. Guarda la posición corregida (alineatedRealX/Y) y el error perpendicular a la línea
+   (errorX/Y/euclideanError) en output/<mismo nombre>.csv.
+'''
 
 
 P_real = [

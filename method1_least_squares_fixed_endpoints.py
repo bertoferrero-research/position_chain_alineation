@@ -2,7 +2,25 @@ import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 
-#Método 1 - Ajustamos la posición estimada real empleando mínimos cuadrados
+'''
+Método 1 - Corrección de la estimación ArUco por mínimos cuadrados, extremos fijos
+
+Es un POSTPROCESADOR: corrige una posición, pero no calcula ni guarda ningún error.
+Lo que corrige es la estimación BRUTA (rawX, rawY) — no la interpolada (realX, realY). La
+interpolada solo se usa para fijar los dos extremos de la recta real (P0_real, Pn_real), tomados
+del primer y el último realX/realY de cada combinación; ningún valor de la interpolada se lee más
+que esos dos, ni se modifica.
+
+El proceso es el siguiente:
+1. Para cada combinación de sampleSpaceMillis/multipleMarkersBehaviour en samples.csv, carga la
+   estimación bruta (rawX, rawY) y la interpolada (realX, realY) de esa combinación.
+2. Define la recta real con el primer y el último punto interpolado de esa combinación.
+3. Para cada punto INTERMEDIO, busca por mínimos cuadrados el punto de la recta que mejor explica
+   (queda más cerca de) la estimación bruta de ese mismo frame.
+4. Los extremos (primer y último punto) se fijan a los extremos de la recta — no se optimizan; se
+   asume que ahí la estimación coincide con el extremo real conocido.
+5. Guarda la posición corregida (un punto nuevo, sobre la recta) en optimized_positions.csv.
+'''
 
 
 def load_positions(sample_space_millis, multiple_markers_behaviour):

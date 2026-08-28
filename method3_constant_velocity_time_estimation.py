@@ -5,13 +5,17 @@ import os
 
 '''
 Método 3 - Estimación de la posición esperada por aproximación temporal (velocidad constante)
-A diferencia de los métodos 1 y 1 v2 (que proyectan cada punto sobre la recta real ajustando
+
+Es un EVALUADOR PURO: no corrige nada, no genera ninguna posición corregida — a diferencia de los
+métodos 1 y 1 v2 (que corrigen la estimación bruta proyectándola sobre la recta, ajustando
 libremente su posición a lo largo de ella, y por tanto solo detectan el error perpendicular a la
 recta), este método calcula la posición donde "debería" estar el objeto en cada instante,
 asumiendo que se mueve a velocidad constante en línea recta entre el primer y el último punto de
 la secuencia. Como esa posición esperada no se ajusta a los datos (se deriva solo del tiempo
 transcurrido), el error resultante frente a la posición calculada recoge las dos componentes:
-a lo largo de la línea y perpendicular a ella.
+a lo largo de la línea y perpendicular a ella. Es la misma idea que ya usa `samples.csv` para
+calcular `realX`/`realY` (ver README), solo que aquí no hay una interpolada de partida: los
+extremos y los instantes se sacan del propio fichero de entrada.
 El proceso es el siguiente:
 1. Carga la secuencia de posiciones calculadas (timestamp, rawX, rawY) desde un CSV.
 2. Toma el primer y el último punto de la secuencia como extremos reales (P0, Pn), y sus

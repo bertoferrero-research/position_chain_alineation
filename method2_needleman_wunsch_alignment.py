@@ -2,7 +2,29 @@ import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 
-#Método 2 - Ajustamos la posición estimada real sincronizandola con la estimada por aruco mediante Needleman-Wunsch
+'''
+Método 2 - Alineación de secuencias (Needleman-Wunsch) entre la estimación ArUco y la interpolada
+
+No es ni un corrector ni un evaluador: es un RESOLVEDOR DE CORRESPONDENCIA. No corrige la
+estimación bruta (no la modifica en absoluto, ni siquiera la guarda en la salida) ni corrige la
+interpolada (tampoco cambia ningún valor ni timestamp suyo) ni calcula ningún error. Es, en la
+práctica, un paso intermedio incompleto: resuelve la parte difícil (con qué punto real se
+corresponde cada estimación) pero no lo usa para corregir ni para medir nada.
+
+Lo que hace es decidir, para cada estimación de una combinación (sampleSpaceMillis,
+multipleMarkersBehaviour), qué punto de la trayectoria real interpolada más fina (la de
+sampleSpaceMillis=0) le corresponde — por parecido espacial (similaridad = distancia euclídea en
+negativo), no por igualdad de índice ni de timestamp.
+
+El proceso es el siguiente:
+1. Carga la interpolada de referencia (la más fina: sampleSpaceMillis=0, primer comportamiento).
+2. Para cada combinación, carga su propia secuencia de estimaciones brutas.
+3. Alinea ambas secuencias con Needleman-Wunsch, permitiendo huecos donde no hay pareja razonable.
+4. Guarda SOLO los puntos de la interpolada de referencia que encontraron pareja (con su timestamp
+   original, sin modificar) en optimized_positions_method2.csv — filtra/selecciona, no corrige.
+   La estimación con la que se emparejó cada punto NO se guarda; para calcular un error habría que
+   volver a samples.csv y cruzar por timestamp con esta salida.
+'''
 
 def load_positions(sample_space_millis, multiple_markers_behaviour):
 

@@ -59,6 +59,44 @@ esa fila. Es decir, esos métodos solo asumen "está en la recta", no "se movió
 constante"; el supuesto de velocidad constante queda reservado a los dos extremos (que ahí sí
 coinciden, por construcción, con `alpha=0` y `alpha=1`).
 
+## Por qué no basta con "calculada − interpolada"
+
+Si la interpolada (`realX`/`realY`) ya representa "dónde debería estar el objeto", lo más simple
+sería medir el error directamente: `error = calculada - interpolada`. De hecho, eso es exactamente
+lo que ya hace `method3_constant_velocity_time_estimation.py` (y lo que ya traía precalculado
+`samples.csv` en sus columnas `errorX`/`errorY`). Esa resta es válida y es la medida más directa
+que existe — **si te fías al 100% de que la interpolada es correcta**.
+
+El problema es justo esa confianza. La interpolada no es una medición: es un cálculo que asume
+velocidad constante entre dos puntos. Si esa asunción no se cumple exactamente (por ejemplo, si
+quien iba moviendo el objeto no lo hizo a ritmo perfectamente constante), entonces
+`calculada − interpolada` deja de medir solo el error del sistema de posicionamiento — mide **ese
+error mezclado con el error de que la velocidad no fuera constante**, sin ninguna forma de separar
+cuánto es culpa de cada cosa.
+
+`method1_least_squares_fixed_endpoints.py`, `method1_v2_least_squares_batch.py` y
+`method2_needleman_wunsch_alignment.py` son, en el fondo, intentos de medir algo **más estrecho
+pero más fiable**, apoyándose en una asunción más débil que "velocidad constante" (y más fácil de
+garantizar en la práctica):
+
+- **Método 1 / 1 v2**: solo asumen que el recorrido fue una **línea recta** — eso lo garantiza el
+  carril físico del montaje, no depende de si la velocidad fue constante. Con una asunción tan
+  débil, solo pueden medir **una parte** del error (cuánto te saliste de la recta, el componente
+  perpendicular), pero esa parte la miden sin necesitar para nada el modelo de tiempo/velocidad.
+  Es "menos" que el error total, pero lo que miden es sólido incluso si la velocidad no fue
+  constante.
+- **Método 2**: ataja un problema distinto de la resta directa: que la fila `i` de lo calculado y
+  la fila `i` de la interpolada sean de verdad el mismo instante. Si hay frames perdidos o el
+  muestreo va irregular, restar fila a fila puede estar comparando el punto equivocado. En vez de
+  asumir que el índice ya está bien alineado, busca la correspondencia por parecido espacial antes
+  de comparar.
+
+En resumen: `calculada − interpolada` (columnas `errorX`/`errorY` de `samples.csv`, o
+`method3_constant_velocity_time_estimation.py`) es la medida del error **total**, pero solo es de
+fiar si la interpolada lo es. `method1`/`method1_v2`/`method2` sacrifican parte de esa información
+(solo miden el componente perpendicular, o solo reordenan la correspondencia) a cambio de depender
+de suposiciones más débiles y más defendibles sobre el experimento.
+
 ## Idea común a los tres métodos
 
 - Tenemos una nube de puntos estimados por ArUco: `P_est` (uno por frame).
