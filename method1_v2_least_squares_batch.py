@@ -7,8 +7,11 @@ import os
 Método 1 v2 - Corrección de la estimación por mínimos cuadrados, genérica y sin extremos fijos
 
 Es un POSTPROCESADOR + EVALUADOR PARCIAL: corrige una posición (igual que el método 1) y además
-calcula un error, pero solo el componente perpendicular a la línea (cross-track) — no el error
-total, porque no usa ninguna información de tiempo/velocidad.
+calcula un error, pero solo el componente PERPENDICULAR a la línea (cross-track) — no el error
+total. La posición a lo largo de la línea (s) se ajusta libremente para cada punto, para acercarse
+todo lo posible al calculado, así que cualquier desviación en esa dirección se absorbe en el propio
+ajuste y no queda registrada; solo sobrevive la perpendicular, porque ahí no hay ningún parámetro
+libre que la pueda cancelar.
 Lo que corrige es la estimación BRUTA (rawX, rawY) — nunca hay una interpolada de por medio en
 este script: la recta real (P_real) es una constante hardcodeada al principio del fichero, no se
 lee de ningún CSV. A diferencia del método 1, aquí NINGÚN punto se fija a los extremos — todos,

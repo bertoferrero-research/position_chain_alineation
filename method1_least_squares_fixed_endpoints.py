@@ -11,6 +11,10 @@ interpolada solo se usa para fijar los dos extremos de la recta real (P0_real, P
 del primer y el último realX/realY de cada combinación; ningún valor de la interpolada se lee más
 que esos dos, ni se modifica.
 
+Solo puede detectar/corregir desviación PERPENDICULAR a la recta. La posición a lo largo de la
+recta (s) se ajusta libremente para acercarse todo lo posible al punto calculado, así que
+cualquier desviación en esa dirección se absorbe en el propio ajuste y no queda registrada.
+
 El proceso es el siguiente:
 1. Para cada combinación de sampleSpaceMillis/multipleMarkersBehaviour en samples.csv, carga la
    estimación bruta (rawX, rawY) y la interpolada (realX, realY) de esa combinación.
